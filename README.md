@@ -6,9 +6,9 @@ This is a C library with Python bindings that will help you split continuous str
 
 # Use cases
 
-* **Parsing XML/JSON log files as they are written. ** In this case, the log file is usually not wellformed since the end tag for the root element is missing, or each log entry is its own root. This library handles both cases.
-* **Parsing huge XML files as objects. ** It may not be feasible to feed the entire file into a deserializer or DOM parser, and using an event based parser is not always desired. By pre-processing with this library you can parse chunks of the stream instead.
-* **Parsing objects from a raw TCP stream. ** Parse the objects as they appear on the raw stream instead of wrapping in HTTP requests or your own protocol.
+* **Parsing XML/JSON log files as they are written**.  In this case, the log file is usually not wellformed since the end tag for the root element is missing, or each log entry is its own root. This library handles both cases.
+* **Parsing huge XML files as objects**. It may not be feasible to feed the entire file into a deserializer or DOM parser, and using an event based parser can add complexity to your code. By pre-processing with this library you can parse chunks of the stream instead.
+* **Parsing objects from a raw TCP stream**. Parse the objects as they appear on the raw stream instead of wrapping in HTTP requests or your own protocol.
 
 # Features
 
