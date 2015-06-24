@@ -1,6 +1,9 @@
 import unittest
 import os
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import BytesIO as StringIO
 import tempfile
 import splitstream
 
@@ -9,35 +12,46 @@ class JsonTests(unittest.TestCase):
         class C(StringIO):
             def read(self, n):
                 return StringIO.read(self, n)
-        return C(string)
+        if bytes != type(string):
+            b = bytes(string, 'utf-8')
+        else:
+            b = string
+        return C(b)
     
     def _tempfile(self, string):
         f = tempfile.TemporaryFile()
-        f.write(string)
+        if bytes != type(string):
+            b = bytes(string, 'utf-8')
+        else:
+            b = string
+        f.write(b)
         f.seek(0)
         return f
     
     def _do_split(self, string, startdepth=0):
         f = self._loadstr(string)
-        return splitstream.splitfile(f, "json", bufsize=self._bufsize, startdepth=startdepth)
+        try:
+            return splitstream.splitfile(f, "json", bufsize=self._bufsize, startdepth=startdepth)
+        finally:
+            f.close()
         
-    DATA_JSON = "{\"a\":[true,2,\"3\",[4,1.0,-1,-1.0],[],{}]}"
+    DATA_JSON = b"{\"a\":[true,2,\"3\",[4,1.0,-1,-1.0],[],{}]}"
 
     def def_SplitSingleJson(self):
         v = self._do_split(self.DATA_JSON)
         assert v == [ self.DATA_JSON ]
         
     def def_SplitTwoJson(self):
-        v = self._do_split("{\"a\":3}{\"b\":3}")
-        assert v == [ "{\"a\":3}","{\"b\":3}" ]
+        v = self._do_split(b"{\"a\":3}{\"b\":3}")
+        assert v == [ b"{\"a\":3}", b"{\"b\":3}" ]
 
     def def_SplitTwoJsonDocumentsWithEscaped(self):
-        v = self._do_split("{\"a}\":3}{\"b\\\"}\":3}")
-        assert v == [ "{\"a}\":3}", "{\"b\\\"}\":3}" ]
+        v = self._do_split(b"{\"a}\":3}{\"b\\\"}\":3}")
+        assert v == [ b"{\"a}\":3}", b"{\"b\\\"}\":3}" ]
         
     def def_SplitTwoJsonDocumentsWithWhitespace(self):
-        v = self._do_split("  {\"a\":3}  \t{\"b\":3}")
-        assert v == [ "{\"a\":3}","{\"b\":3}" ]
+        v = self._do_split(b"  {\"a\":3}  \t{\"b\":3}")
+        assert v == [ b"{\"a\":3}", b"{\"b\":3}" ]
         
     def __init__(self, *a, **kw):
         unittest.TestCase.__init__(self, *a, **kw)
@@ -46,7 +60,6 @@ class JsonTests(unittest.TestCase):
         
 for m in dir(JsonTests):
     if m.startswith("def_"):
-        print m
         func = getattr(JsonTests, m)
         for mode in ["str", "file"]:
             for bufsize in [1, 2, 7, 4096]:

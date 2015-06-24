@@ -17,6 +17,7 @@
  */
 
 #include <Python.h>
+#include <bytesobject.h>
 #include "../splitstream.h"
 const static int SPLITSTREAM_STATE_FLAG_DID_RETURN_DOCUMENT = 8;
  
@@ -113,21 +114,28 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
     Py_XINCREF(callback);
     
     do {
-    	file_read = PyObject_GetAttr(file, PyString_FromString("read"));
+    	file_read = PyObject_GetAttrString(file, "read");
 	    if(!file_read) { ret = NULL; break; }
     
-    	file_fileno = PyObject_GetAttr(file, PyString_FromString("fileno"));
+    	file_fileno = PyObject_GetAttrString(file, "fileno");
     	if(file_fileno) {
 	    	PyObject* fn = PyObject_Call(file_fileno, noargs, NULL);
+	    	#if PY_MAJOR_VERSION >= 3
+	    	if(fn) {
+	    	#else
 	    	if(!fn) { ret = NULL; break; }
+	    	#endif
 	    	
-    		fileno = (int)PyInt_AsLong(fn);
+    		fileno = (int)PyLong_AsLong(fn);
     		if(fileno < 0) {
     			if(!PyErr_Occurred()) {
     				PyErr_Format(PyExc_ValueError, "Invalid fileno %d.", fileno); 
     			}
     			ret = NULL; break;
     		}
+    		#if PY_MAJOR_VERSION >= 3
+    		} else PyErr_Clear();
+    		#endif
     	} else PyErr_Clear();
     
 	    if(!strcmp(fmt, "xml")) {
@@ -151,7 +159,7 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
     
 	    if(!callback) {
     		ret = PyList_New(0);
-    		callback = PyObject_GetAttr(ret, PyString_FromString("append"));
+    		callback = PyObject_GetAttrString(ret, "append");
     		if(!callback) { Py_DECREF(ret); ret = NULL; break; }
 	    }
     
@@ -181,12 +189,33 @@ static PyMethodDef methods[] = {
     {"splitfile", (PyCFunction)splitfile, METH_VARARGS | METH_KEYWORDS, "Split a file object.\n\nsplitfile(file, format[, callback]) -> Split the file, optionally specifying a callback that will be called with each object.\n\nIf callback is not specified, the function instead returns a list of the string chunks.\n\nOptional keyword arguments:\n  bufsize - Size of read buffer"},
     {NULL, NULL, 0, NULL}
 };
+
+#define MODULE_NAME "splitstream"
+#define MODULE_DESC "Splitting of (XML, JSON) objects from a continuous stream"
  
+#if PY_MAJOR_VERSION >= 3
+PyObject* PyInit_splitstream(void) 
+{
+	static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        MODULE_NAME,
+        MODULE_DESC,
+        0,
+        methods,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+	};
+	return PyModule_Create(&moduledef);
+}
+#else
 PyMODINIT_FUNC
 initsplitstream(void)
 {
-    (void) Py_InitModule3("splitstream", methods, "Splitting of (XML, JSON) objects from a continuous stream");
+    (void) Py_InitModule3(MODULE_NAME, methods, MODULE_DESC);
 }
+#endif
 
 /**
 *** Helpers
@@ -225,7 +254,7 @@ static int splitfile_pure_once(SplitstreamState* s, PyObject* read, PyObject* re
         PyObject* data = PyObject_Call(read, readargs, NULL);
         if(!data) return -1;
         
-        if(PyString_AsStringAndSize(data, &buf, &len) < 0) return -1;
+        if(PyBytes_AsStringAndSize(data, &buf, &len) < 0) return -1;
         eof = len == 0;
 
         SplitstreamDocument doc = SplitstreamGetNextDocument(s, max, buf, len, scanner);
@@ -249,7 +278,7 @@ static int call_callback(SplitstreamDocument* doc, PyObject* callback)
 	if(doc->buffer) {
 		PyObject* val, *vals;
 	
-		val = PyString_FromStringAndSize(doc->buffer, doc->length);
+		val = PyBytes_FromStringAndSize(doc->buffer, doc->length);
 		if(!val) return -1;
 		vals = PyTuple_Pack(1, val);
 		if(!vals) {
