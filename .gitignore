@@ -36,4 +36,5 @@
 
 # distutils
 /build
+/dist
 *.egg-info

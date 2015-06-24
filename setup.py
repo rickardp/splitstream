@@ -14,10 +14,12 @@ setup(
     url="https://github.com/evolvIQ/splitstream",
     author="Rickard Lyrenius",
     author_email="rickard@evolviq.com",
-    version='1.0.0',
+    version="1.0.2",
     description="Splitting of (XML, JSON) objects from a continuous stream",
     ext_modules=[Extension('splitstream', ['src/python/splitstream_py.c', 'src/splitstream.c', 'src/splitstream_xml.c', 'src/splitstream_json.c'])],
+    headers=['src/splitstream.h', 'src/splitstream_private.h'],
     install_requires=requirements + test_requirements,
     zip_safe=False,
-    test_suite='tests'
+    test_suite='tests',
+    classifiers=["License :: OSI Approved :: Apache Software License", "Topic :: Software Development :: Libraries :: Python Modules"]
 )

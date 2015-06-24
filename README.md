@@ -29,6 +29,18 @@ This is a C library with Python bindings that will help you split continuous str
 * Limited error handling. May not recover from malformed objects in many cases.
 * Limited documentation (the unit tests are a good start for now).
 
+# Using it
+
+The easiest way to use splitstream is to create a requirements.txt for your project:
+
+   echo 'splitstream>=1.0.2' >> requirements.txt
+
+or install manually
+
+   pip install splitstream
+
+It is also very easy to clone this repo and build from source.
+
 # Building
 
 To build, use 
