@@ -20,74 +20,66 @@
 #include <bytesobject.h>
 #include "../splitstream.h"
 const static int SPLITSTREAM_STATE_FLAG_DID_RETURN_DOCUMENT = 8;
+const static int SPLITSTREAM_STATE_FLAG_FILE_EOF = 16;
  
+static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs);
 static int call_callback(SplitstreamDocument* doc, PyObject* callback);
-static int splitfile_pure_once(SplitstreamState* s, PyObject* read, PyObject* readargs, long max, SplitstreamScanner scanner, PyObject* callback);
-static int splitfile_pure_core(SplitstreamState* s, PyObject* read, PyObject* readargs, long max, SplitstreamScanner scanner, PyObject* callback);
+static PyObject* as_python_object(SplitstreamDocument* doc);
+static int splitfile_pure_once(SplitstreamState* s, PyObject* read, PyObject* readargs, long max, SplitstreamScanner scanner, SplitstreamDocument* doc);
 
-/*
- At its simplest, splitstream requires an object with a read([integer]) method.
- */
-static int splitfile_pure(PyObject* read, long max, long bufsize, SplitstreamScanner scanner, 
-	int startDepth, PyObject* callback)
-{
-	int ret;
-	PyObject* readargs = Py_BuildValue("(i)", bufsize);
+typedef struct {
+	PyObject_HEAD
+	PyObject* read, *callback;
+	SplitstreamScanner scanner;
 	SplitstreamState state;
-	SplitstreamInitDepth(&state, startDepth);
-	ret = splitfile_pure_core(&state, read, readargs, max, scanner, callback);
-	SplitstreamFree(&state);
-	Py_DECREF(readargs);
-	return ret;
-}
-
-/*
- Optimized version - when a file object contains a file handle, we don't have to ask Python
- for each new data block since we can read it directly using fread.
- */
-static int splitfile_fileno(int fileno, long max, long bufsize, SplitstreamScanner scanner,
-	int startDepth, PyObject* callback)
-{
+	int eof, fileeof;
 	FILE* f;
-	char* buf = malloc(bufsize);
-	if(!buf) {
-    	PyErr_SetString(PyExc_MemoryError, "Unable to allocate buffer."); 
-		return -1;
-	}
-	f = fdopen(fileno, "r");
-	if(!f) {
-		free(buf);
-    	PyErr_SetString(PyExc_IOError, "Unable to open file handle for reading."); 
-		return -1;
-	}
-	SplitstreamDocument doc;
-	SplitstreamState state;
-	SplitstreamInitDepth(&state, startDepth);
-    while(!feof(f)) {
-    	doc = SplitstreamGetNextDocumentFromFile(&state, buf, bufsize, max, f, scanner);
-    	if(doc.buffer) {
-            if(call_callback(&doc, callback) < 0) {
-				SplitstreamFree(&state);
-	            return -1;
-	        }
-    	}
-    }
-    do {
-    	doc = SplitstreamGetNextDocumentFromFile(&state, buf, bufsize, max, f, scanner);
-    	if(doc.buffer) {
-            if(call_callback(&doc, callback) < 0) {
-				SplitstreamFree(&state);
-	            return -1;
-	        }
-    	}
-    } while (doc.buffer);
-    free(buf);
-	SplitstreamFree(&state);
-	return 0;
-}
+	long bufsize, max;
+	char* buf;
+} Generator;
+
+static Generator* splitstream_generator_new(PyTypeObject *type, PyObject *args, PyObject *kwargs);
+static void splitstream_generator_dealloc(Generator* state);
+static PyObject* splitstream_generator_next(Generator *state);
 
 /*
- Entry point
+ Module definition
+ */
+ 
+static PyMethodDef methods[] = {
+    {"splitfile", (PyCFunction)splitfile, METH_VARARGS | METH_KEYWORDS, "Split a file object.\n\nsplitfile(file, format[, callback]) -> Split the file, optionally specifying a callback that will be called with each object.\n\nIf callback is not specified, the function instead returns a list of the string chunks.\n\nOptional keyword arguments:\n  bufsize - Size of read buffer"},
+    {NULL, NULL, 0, NULL}
+};
+
+#define MODULE_NAME "splitstream"
+#define MODULE_DESC "Splitting of (XML, JSON) objects from a continuous stream"
+ 
+#if PY_MAJOR_VERSION >= 3
+PyObject* PyInit_splitstream(void) 
+{
+	static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        MODULE_NAME,
+        MODULE_DESC,
+        0,
+        methods,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+	};
+	return PyModule_Create(&moduledef);
+}
+#else
+PyMODINIT_FUNC
+initsplitstream(void)
+{
+    (void) Py_InitModule3(MODULE_NAME, methods, MODULE_DESC);
+}
+#endif
+
+/*
+ 'splitfile' Entry point
  */
 static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
 {
@@ -98,6 +90,26 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
     long bufsize = 0, max = 0, startDepth = 0;
     int fileno = -1;
     SplitstreamScanner scanner;
+    Generator* g;
+    static int gt = 0;
+    static PyTypeObject gentype = {
+    	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    	"splitstream.( generator )",
+    	sizeof(Generator)
+    };
+    if(!gt) {
+    	gentype.tp_dealloc = (destructor)splitstream_generator_dealloc;
+	    gentype.tp_flags = Py_TPFLAGS_DEFAULT;
+    	gentype.tp_iter = PyObject_SelfIter;
+	    gentype.tp_iternext = (iternextfunc)splitstream_generator_next;
+    	gentype.tp_alloc = PyType_GenericAlloc;
+	    gentype.tp_new = (newfunc)splitstream_generator_new;
+	    if(PyType_Ready(&gentype) < 0)
+	    	return NULL;
+	    Py_INCREF(&gentype);
+    	gt = 1;
+    }
+    
     static char* kwarg_list[] = {"file", "format", "callback", "startdepth", "bufsize", "maxdocsize", NULL};
  
  
@@ -157,22 +169,31 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
 		    ret = NULL; break;
     	}
     
-	    if(!callback) {
-    		ret = PyList_New(0);
-    		callback = PyObject_GetAttrString(ret, "append");
-    		if(!callback) { Py_DECREF(ret); ret = NULL; break; }
+    	g = splitstream_generator_new(&gentype, PyTuple_Pack(0), NULL);
+	    if(!g) { ret = NULL; break; }
+	    
+	    if(fileno >= 0) {
+			g->f = fdopen(fileno, "r");
+			if(!g->f) {
+		    	Py_DECREF((PyObject*)g);
+		    	PyErr_SetString(PyExc_IOError, "Unable to open file handle for reading."); 
+				ret = NULL; break;
+			}
 	    }
-    
-    	if(fileno >= 0) {
-		    if(splitfile_fileno(fileno, max, bufsize, scanner, (int)startDepth, callback) < 0) {
-			    Py_DECREF(ret);
-	    		ret = NULL; break;
+	    g->read = file_read; Py_XINCREF(file_read);
+	    g->scanner = scanner;
+	    g->callback = callback; Py_XINCREF(callback);
+	    g->bufsize = bufsize;
+	    g->max = max;
+	    SplitstreamInitDepth(&g->state, (int)startDepth);
+	    
+	    if(!callback) {
+	    	ret = (PyObject*)g;
+	    } else {
+	    	while(!g->eof) {
+	    		splitstream_generator_next(g);
 	    	}
-    	} else {
-		    if(splitfile_pure(file_read, max, bufsize, scanner, (int)startDepth, callback) < 0) {
-			    Py_DECREF(ret);
-	    		ret = NULL; break;
-	    	}
+	    	Py_DECREF((PyObject*)g);
 	    }
 	} while(0);
 	
@@ -184,66 +205,115 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
     
     return ret;
 }
- 
-static PyMethodDef methods[] = {
-    {"splitfile", (PyCFunction)splitfile, METH_VARARGS | METH_KEYWORDS, "Split a file object.\n\nsplitfile(file, format[, callback]) -> Split the file, optionally specifying a callback that will be called with each object.\n\nIf callback is not specified, the function instead returns a list of the string chunks.\n\nOptional keyword arguments:\n  bufsize - Size of read buffer"},
-    {NULL, NULL, 0, NULL}
-};
 
-#define MODULE_NAME "splitstream"
-#define MODULE_DESC "Splitting of (XML, JSON) objects from a continuous stream"
- 
-#if PY_MAJOR_VERSION >= 3
-PyObject* PyInit_splitstream(void) 
+/**
+*** Generator object
+**/
+
+static Generator* splitstream_generator_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-	static struct PyModuleDef moduledef = {
-        PyModuleDef_HEAD_INIT,
-        MODULE_NAME,
-        MODULE_DESC,
-        0,
-        methods,
-        NULL,
-        NULL,
-        NULL,
-        NULL
-	};
-	return PyModule_Create(&moduledef);
+	Generator* state = (Generator *)type->tp_alloc(type, 0);
+	if (!state) return NULL;
+	
+	state->read = state->callback = NULL;
+	state->eof = state->fileeof = 0;
+	state->f = NULL;
+	state->buf = NULL;
+	memset(&state->state, 0, sizeof(state->state));
+
+    return state;
 }
-#else
-PyMODINIT_FUNC
-initsplitstream(void)
+
+static void splitstream_generator_dealloc(Generator* state)
 {
-    (void) Py_InitModule3(MODULE_NAME, methods, MODULE_DESC);
+	Py_XDECREF(state->read); state->read = NULL;
+	Py_XDECREF(state->callback); state->callback = NULL;
+	SplitstreamFree(&state->state);
+	if(state->buf) free(state->buf);
+	state->buf = NULL;
+	Py_TYPE(state)->tp_free(state);
 }
-#endif
+
+static PyObject* handle_doc(Generator *state, SplitstreamDocument* doc) {
+	if(state->callback) {
+		if(call_callback(doc, state->callback) < 0)
+			return NULL;
+		return Py_None;
+	} else {
+		return as_python_object(doc);
+	}
+}
+
+static PyObject* splitstream_generator_next(Generator *state)
+{
+    SplitstreamDocument doc;
+    doc.buffer = NULL;
+	if(!state->scanner) {
+		PyErr_SetString(PyExc_ValueError, "Invalid generator.");
+		return NULL;
+	}
+	if(state->eof) {
+		return NULL;
+	}
+	PyObject* readargs = state->f ? NULL : Py_BuildValue("(i)", state->bufsize);
+	PyObject* ret = NULL;
+	do {
+		if(state->f) {
+			if(!state->buf) state->buf = malloc(state->bufsize);
+			if(!state->buf) {
+				PyErr_SetString(PyExc_MemoryError, "Unable to allocate buffer."); 
+				ret = NULL; break;
+			}
+			while(!(state->state.flags & SPLITSTREAM_STATE_FLAG_FILE_EOF)) {
+				doc = SplitstreamGetNextDocumentFromFile(&state->state, state->buf, state->bufsize, state->max, state->f, state->scanner);
+				if(doc.buffer) {
+					ret = handle_doc(state, &doc);
+					break;
+				}
+			}
+			if(doc.buffer) break;
+			doc = SplitstreamGetNextDocumentFromFile(&state->state, state->buf, state->bufsize, state->max, state->f, state->scanner);
+			if(doc.buffer) {
+				ret = handle_doc(state, &doc);
+				break;
+			} else {
+				state->eof = 1;
+			}
+		} else {
+		
+			while(!state->fileeof) {
+				int eof = splitfile_pure_once(&state->state, state->read, readargs, state->max, state->scanner, &doc);
+				if(eof < 0) { ret = NULL; break; }
+				state->fileeof = eof;
+				if(doc.buffer) {
+					ret = handle_doc(state, &doc);
+					break;
+				}
+			}
+			if(doc.buffer) break;
+			state->eof = splitfile_pure_once(&state->state, NULL, NULL, state->max, state->scanner, &doc);
+			if(doc.buffer) {
+				ret = handle_doc(state, &doc);
+				break;
+			}
+		}
+	} while (0);
+	Py_XDECREF(readargs);
+	SplitstreamDocumentFree(&state->state, &doc);
+	return ret;
+}
 
 /**
 *** Helpers
 **/
 
-static int splitfile_pure_core(SplitstreamState* s, PyObject* read, PyObject* readargs, long max, SplitstreamScanner scanner, PyObject* callback)
-{
-    int eof = 0;
-    while(!eof) {
-		eof = splitfile_pure_once(s, read, readargs, max, scanner, callback);
-		if(eof < 0) return -1;
-    }
-    do {
-		eof = splitfile_pure_once(s, NULL, NULL, max, scanner, callback);
-		if(eof < 0) return -1;
-    } while (!eof);
-    return 0;
-}
-
-static int splitfile_pure_once(SplitstreamState* s, PyObject* read, PyObject* readargs, long max, SplitstreamScanner scanner, PyObject* callback)
+static int splitfile_pure_once(SplitstreamState* s, PyObject* read, PyObject* readargs, long max, SplitstreamScanner scanner, SplitstreamDocument* doc)
 {
 	int eof = 1;
     if(s->flags & SPLITSTREAM_STATE_FLAG_DID_RETURN_DOCUMENT) {
-        SplitstreamDocument doc = SplitstreamGetNextDocument(s, max, NULL, 0, scanner);
-        if(doc.buffer) {
+        *doc = SplitstreamGetNextDocument(s, max, NULL, 0, scanner);
+        if(doc->buffer) {
             s->flags |= SPLITSTREAM_STATE_FLAG_DID_RETURN_DOCUMENT;
-            if(call_callback(&doc, callback) < 0)
-	            return -1;
             return 0;
         }
     }
@@ -257,12 +327,10 @@ static int splitfile_pure_once(SplitstreamState* s, PyObject* read, PyObject* re
         if(PyBytes_AsStringAndSize(data, &buf, &len) < 0) return -1;
         eof = len == 0;
 
-        SplitstreamDocument doc = SplitstreamGetNextDocument(s, max, buf, len, scanner);
+        *doc = SplitstreamGetNextDocument(s, max, buf, len, scanner);
         Py_DECREF(data);
-        if(doc.buffer) {
+        if(doc->buffer) {
             s->flags |= SPLITSTREAM_STATE_FLAG_DID_RETURN_DOCUMENT;
-            if(call_callback(&doc, callback) < 0)
-	            return -1;
             return eof;
         }
         if(eof) break;
@@ -297,4 +365,13 @@ static int call_callback(SplitstreamDocument* doc, PyObject* callback)
 	
     } else PyErr_SetString(PyExc_ValueError, "Invalid object"); 
 	return -1;
+}
+
+static PyObject* as_python_object(SplitstreamDocument* doc)
+{
+	if(doc->buffer) {
+		return PyBytes_FromStringAndSize(doc->buffer, doc->length);
+	} else {
+		return Py_None;
+	}
 }

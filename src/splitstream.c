@@ -19,9 +19,16 @@
 #include "splitstream_private.h"
 #include <string.h>
 
-static void AppendDoc(SplitstreamDocument* dest, const void* ptr, size_t length);
+static void AppendDoc(SplitstreamState* state, SplitstreamDocument* dest, const void* ptr, size_t length);
 
 const static int SPLITSTREAM_STATE_FLAG_DID_RETURN_DOCUMENT = 8;
+const static int SPLITSTREAM_STATE_FLAG_FILE_EOF = 16;
+
+struct mempool* mempool_New();
+void mempool_Destroy(struct mempool* pool, int check);
+void* mempool_Alloc(struct mempool* pool, size_t size);
+void* mempool_ReAlloc(struct mempool* pool, void* ptr, size_t oldSize, size_t newSize);
+void mempool_Free(struct mempool* pool, void* ptr, size_t size);
 
 SplitstreamDocument SPLITSTREAM_API SplitstreamGetNextDocument(SplitstreamState* s, size_t max, const char* buf, size_t len, SplitstreamScanner scan) {
     size_t start = (size_t)-1, end;
@@ -34,7 +41,7 @@ SplitstreamDocument SPLITSTREAM_API SplitstreamGetNextDocument(SplitstreamState*
         s->doc.buffer = NULL;
         s->doc.length = 0;
         if(buf && len) {
-            AppendDoc(&rescanDoc, buf, len);
+            AppendDoc(s, &rescanDoc, buf, len);
         }
         s->state = State_Init;
         buf = rescanDoc.buffer;
@@ -49,24 +56,24 @@ SplitstreamDocument SPLITSTREAM_API SplitstreamGetNextDocument(SplitstreamState*
         s->doc.buffer = NULL;
         s->doc.length = 0;
         if(buf && len) {
-            AppendDoc(&doc, buf + start, end - start);
+            AppendDoc(s, &doc, buf + start, end - start);
         }
         s->state = (end < len) ? State_Rescan : State_Init;
         start = end;
     }
     if(s->state != State_Init && start < len) {
         if(didSetStart) {
-            SplitstreamDocumentFree(&s->doc);
+            SplitstreamDocumentFree(s, &s->doc);
         } else if(s->doc.length + len - start > max) {
             // If document was too large, discard it
-            SplitstreamDocumentFree(&s->doc);
+            SplitstreamDocumentFree(s, &s->doc);
             s->state = State_Init;
         }
         if(buf && len) {
-            AppendDoc(&s->doc, buf + start, len - start);
+            AppendDoc(s, &s->doc, buf + start, len - start);
         }
     }
-    SplitstreamDocumentFree(&rescanDoc);
+    SplitstreamDocumentFree(s, &rescanDoc);
     return doc;
 }
 
@@ -84,6 +91,7 @@ SplitstreamDocument SPLITSTREAM_API SplitstreamGetNextDocumentFromFile(Splitstre
     while(file) {
         size_t len = fread(buf, 1, bufferSize, file);
         if(len == 0) {
+        	s->flags |= SPLITSTREAM_STATE_FLAG_FILE_EOF;
             SplitstreamDocument doc = {NULL, 0};
             return doc;
         }
@@ -101,11 +109,13 @@ SplitstreamDocument SPLITSTREAM_API SplitstreamGetNextDocumentFromFile(Splitstre
 
 }
 
-
-void SPLITSTREAM_API SplitstreamDocumentFree(SplitstreamDocument* doc) {
-    if(doc->buffer) free((void*)doc->buffer);
+void SPLITSTREAM_API SplitstreamDocumentFree(SplitstreamState* state, SplitstreamDocument* doc) {
+    if(doc->buffer) {
+    	if(state && state->mempool)
+    		mempool_Free(state->mempool, (void*)doc->buffer, doc->length);
+    }
     doc->buffer = NULL;
-    doc->length = 1;
+    doc->length = 0;
 }
 
 void SPLITSTREAM_API SplitstreamInit(SplitstreamState* state) {
@@ -118,21 +128,24 @@ void SPLITSTREAM_API SplitstreamInitDepth(SplitstreamState* state, int startDept
 }
 
 void SPLITSTREAM_API SplitstreamFree(SplitstreamState* state) {
-    SplitstreamDocumentFree(&state->doc);
+    SplitstreamDocumentFree(state, &state->doc);
+    if(state->mempool) mempool_Destroy(state->mempool, 1);
+    state->mempool = NULL;
 }
 
 
-static void AppendDoc(SplitstreamDocument* dest, const void* ptr, size_t length) {
+static void AppendDoc(SplitstreamState* state, SplitstreamDocument* dest, const void* ptr, size_t length) {
     if(!length) return;
 
+	if(!state->mempool) state->mempool = mempool_New();
     size_t prevLength = 0;
     if(!dest->buffer) {
         dest->length = length;
-        dest->buffer = malloc(dest->length);
+        dest->buffer = mempool_Alloc(state->mempool, dest->length);
     } else {
         prevLength = dest->length;
         dest->length += length;
-        dest->buffer = realloc((void*)dest->buffer, dest->length);
+        dest->buffer = mempool_ReAlloc(state->mempool, (void*)dest->buffer, prevLength, dest->length);
     }
     if(!dest->buffer) abort();
     memcpy(((char*)dest->buffer) + prevLength, ptr, length);

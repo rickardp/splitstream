@@ -39,6 +39,7 @@ typedef struct {
     int flags;
     SplitstreamTokenizerState state;
     SplitstreamDocument doc;
+    struct mempool* mempool;
 } SplitstreamState;
 
 #ifndef SPLITSTREAM_API
@@ -52,7 +53,7 @@ typedef size_t (*SplitstreamScanner)(SplitstreamState* ptr, const char* buf, siz
 size_t SPLITSTREAM_API SplitstreamXMLScanner(SplitstreamState* s, const char* buf, size_t len, size_t* start);
 size_t SPLITSTREAM_API SplitstreamJSONScanner(SplitstreamState* s, const char* buf, size_t len, size_t* start);
 
-void SPLITSTREAM_API SplitstreamDocumentFree(SplitstreamDocument* doc);
+void SPLITSTREAM_API SplitstreamDocumentFree(SplitstreamState* state, SplitstreamDocument* doc);
 void SPLITSTREAM_API SplitstreamInit(SplitstreamState* state);
 void SPLITSTREAM_API SplitstreamInitDepth(SplitstreamState* state, int startDepth);
 void SPLITSTREAM_API SplitstreamFree(SplitstreamState* state);

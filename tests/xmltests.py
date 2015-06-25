@@ -33,7 +33,7 @@ class XmlTests(unittest.TestCase):
     def _do_split(self, string, startdepth=0):
         f = self._loadstr(string)
         try:
-            return splitstream.splitfile(f, "xml", bufsize=self._bufsize, startdepth=startdepth)
+            return list(splitstream.splitfile(f, "xml", bufsize=self._bufsize, startdepth=startdepth))
         finally:
             f.close()
 
