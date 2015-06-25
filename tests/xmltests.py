@@ -67,9 +67,10 @@ class XmlTests(unittest.TestCase):
         
     def def_XmlDocumentsWithStartDepth(self):
         v = self._do_split(b"  <logfile>  <logent val=\"x\"></logent>\r\n<logent val=\"y\"></logent><logent val=\"z\"></logent>", startdepth=1)
-        assert v == [ b"<logent val=\"x\"></logent>",
+        exp = [ b"<logent val=\"x\"></logent>",
                       b"<logent val=\"y\"></logent>",
                       b"<logent val=\"z\"></logent>" ]
+        assert v == exp, "%r != %r" % (v, exp)
                       
     def def_TwoXmlDocumentsWithDoctype(self):
         v = self._do_split(b"<!doctype misc><root></root>\r\n<!doctype misc><root2/>")

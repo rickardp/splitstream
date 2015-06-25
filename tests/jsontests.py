@@ -39,19 +39,22 @@ class JsonTests(unittest.TestCase):
 
     def def_SplitSingleJson(self):
         v = self._do_split(self.DATA_JSON)
-        assert v == [ self.DATA_JSON ]
+        assert v == [ self.DATA_JSON ], "%r != %r" % (v, [ self.DATA_JSON ] )
         
     def def_SplitTwoJson(self):
         v = self._do_split(b"{\"a\":3}{\"b\":3}")
-        assert v == [ b"{\"a\":3}", b"{\"b\":3}" ]
+        exp = [ b"{\"a\":3}", b"{\"b\":3}" ]
+        assert v == exp, "%r != %r" % (v, exp)
 
     def def_SplitTwoJsonDocumentsWithEscaped(self):
         v = self._do_split(b"{\"a}\":3}{\"b\\\"}\":3}")
-        assert v == [ b"{\"a}\":3}", b"{\"b\\\"}\":3}" ]
+        exp = [ b"{\"a}\":3}", b"{\"b\\\"}\":3}" ]
+        assert v == exp, "%r != %r" % (v, exp)
         
     def def_SplitTwoJsonDocumentsWithWhitespace(self):
         v = self._do_split(b"  {\"a\":3}  \t{\"b\":3}")
-        assert v == [ b"{\"a\":3}", b"{\"b\":3}" ]
+        exp = [ b"{\"a\":3}", b"{\"b\":3}" ]
+        assert v == exp, "%r != %r" % (v, exp)
         
     def __init__(self, *a, **kw):
         unittest.TestCase.__init__(self, *a, **kw)

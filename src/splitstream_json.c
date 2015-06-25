@@ -19,38 +19,89 @@
 #include "splitstream_private.h"
 
 size_t SplitstreamJSONScanner(SplitstreamState* s, const char* buf, size_t len, size_t* start) {
-    unsigned int i;
-    for(i = 0; i < len; ++i) {
-        switch(buf[i]) {
-            case '{':
-            case '[':
-                if(s->state == State_Init) {
-                    *start = i;
-                    s->state = State_Document;
-                }
-                if(s->state != State_String)
-                    ++s->depth;
-                break;
-            case '}':
-            case ']':
-                if(s->state == State_Document) {
-                    if(--s->depth == s->startDepth) {
-                        s->last = buf[i];
-                        return i + 1;
-                    }
-                }
-                break;
+	int escapeCounter = s->counter[0];
+    SplitstreamTokenizerState state = s->state;
+    const char* end = buf + len, *cp = buf;
+    
+    #define LOOP_BEGIN \
+	    for(; cp != end; ++cp) { \
+    	    char c = *cp; \
+	        switch(c) {
+	        
+	#define LOOP_END \
+			} \
+	        s->last = c; \
+		} \
+		goto h_End;
+	
+	#define TRANSITION(x) \
+		state = State_##x; \
+		++cp; \
+		goto h_##x;
+	
+		switch(state) {
+			case State_Init:
+				goto h_Init;
+			case State_Document:
+				goto h_Document;
+			case State_String:
+				goto h_String;
+			default:
+				abort();
+		}
+		
+	h_Init:
+		LOOP_BEGIN
+		case '[':
+		case '{':
+            *start = (cp - buf);
+            ++s->depth;
+            TRANSITION(Document)
+			break;
+        case '"':
+        	TRANSITION(String);
+        	break;
+		LOOP_END
+		
+	h_Document:
+		LOOP_BEGIN
+		case '[':
+		case '{':
+            ++s->depth;
+            break;
+		case ']':
+		case '}':
+            if(--s->depth == s->startDepth) {
+				s->last = c;
+				s->state = state;
+				s->counter[0] = 0;
+				return (cp - buf + 1);
+			}
+            break;
+        case '"':
+        	TRANSITION(String);
+        	break;
+		LOOP_END
+		
+	h_String:
+		LOOP_BEGIN
+			default:
+				escapeCounter = 0;
+				break;
             case '"':
-                if(s->state == State_String) {
-                    if(s->last != '\\') {
-                        s->state = State_Document;
-                    }
-                } else {
-                    s->state = State_String;
+                if(!(escapeCounter & 1)) {
+					escapeCounter = 0;
+                	TRANSITION(Document)
                 }
-                break;
-        }
-        s->last = buf[i];
-    }
+				escapeCounter = 0;
+				break;
+            case '\\':
+            	++escapeCounter;
+            	break;
+		LOOP_END
+		
+    h_End:
+		s->state = state;
+    	s->counter[0] = escapeCounter;
     return 0;
 }
