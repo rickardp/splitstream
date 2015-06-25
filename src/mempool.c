@@ -15,8 +15,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
- 
- #include <stdlib.h>
+
+#include <stdlib.h>
 #include <string.h>
 
 /* Allocation chunk size, in powers of 2 */
@@ -32,7 +32,7 @@ struct mempool
     struct mempool* next;
 };
 
-struct mempool* mempool_New()
+struct mempool* mempool_New(void)
 {
 	struct mempool* pool = malloc(sizeof(struct mempool));
 	if(!pool) return NULL;
@@ -53,18 +53,18 @@ void mempool_Destroy(struct mempool* pool, int check)
 
 void* mempool_Alloc(struct mempool* pool, size_t size)
 {
-	int blocksNeeded, bitsRem;
+	int blocksNeeded, bitsRem, bit;
 	unsigned long mask;
-	
+
     if(size <= 1) size = (1 << MEMPOOL_QUANTUM_POWER);
     blocksNeeded = (int)((size - 1) >> (MEMPOOL_QUANTUM_POWER)) + 1;
-    
+
 	if(blocksNeeded > MEMPOOL_BLOCK_QUANTUMS) return malloc(size);
-	
+
 	mask = (1 << blocksNeeded) - 1;
-    
+
 	bitsRem = MEMPOOL_BLOCK_QUANTUMS - blocksNeeded;
-	for(int bit = 0; bit <= MEMPOOL_BLOCK_QUANTUMS; ++bit) {
+	for(bit = 0; bit <= bitsRem; ++bit) {
 		if(((pool->bitmask >> bit) & mask) == 0) {
 			pool->bitmask |= mask << bit;
 			void* pd = pool->data + (1 << MEMPOOL_QUANTUM_POWER) * bit;

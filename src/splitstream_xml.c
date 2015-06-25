@@ -24,8 +24,8 @@ const int COUNTER_CLOSING_BRACKET = 1;
 size_t SplitstreamXMLScanner(SplitstreamState* s, const char* buf, size_t len, size_t* start) {
     int dashCounter = s->counter[COUNTER_DASH], bracketCounter = s->counter[COUNTER_CLOSING_BRACKET];
     SplitstreamTokenizerState state = s->state;
-    const char* end = buf + len;
-    for(const char* cp = buf; cp != end; ++cp) {
+    const char* end = buf + len, *cp;
+    for(cp = buf; cp != end; ++cp) {
         char c = *cp;
         switch(c) {
             default:

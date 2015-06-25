@@ -38,3 +38,4 @@
 /build
 /dist
 *.egg-info
+*.dtps

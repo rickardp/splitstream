@@ -24,7 +24,7 @@ static void AppendDoc(SplitstreamState* state, SplitstreamDocument* dest, const 
 const static int SPLITSTREAM_STATE_FLAG_DID_RETURN_DOCUMENT = 8;
 const static int SPLITSTREAM_STATE_FLAG_FILE_EOF = 16;
 
-struct mempool* mempool_New();
+struct mempool* mempool_New(void);
 void mempool_Destroy(struct mempool* pool, int check);
 void* mempool_Alloc(struct mempool* pool, size_t size);
 void* mempool_ReAlloc(struct mempool* pool, void* ptr, size_t oldSize, size_t newSize);

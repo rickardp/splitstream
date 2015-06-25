@@ -319,7 +319,7 @@ static int splitfile_pure_once(SplitstreamState* s, PyObject* read, PyObject* re
     }
 
     while(read) {
-	    long len;
+	    Py_ssize_t len;
 	    char* buf;
         PyObject* data = PyObject_Call(read, readargs, NULL);
         if(!data) return -1;

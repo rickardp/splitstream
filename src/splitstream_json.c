@@ -19,7 +19,8 @@
 #include "splitstream_private.h"
 
 size_t SplitstreamJSONScanner(SplitstreamState* s, const char* buf, size_t len, size_t* start) {
-    for(unsigned int i = 0; i < len; ++i) {
+    unsigned int i;
+    for(i = 0; i < len; ++i) {
         switch(buf[i]) {
             case '{':
             case '[':
