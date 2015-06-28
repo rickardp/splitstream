@@ -117,8 +117,17 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
  
 	noargs = PyTuple_Pack(0);
 	if(!noargs) return NULL;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|Oiiis", kwarg_list, &file, &fmt, &callback, &startDepth, &bufsize, &max, &preamble))
+	#if PY_MAJOR_VERSION >= 3
+	#define FMT "Os|Oiiiy"
+	#else
+	#define FMT "Os|Oiiis"
+	#endif
+	
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, FMT, kwarg_list, &file, &fmt, &callback, &startDepth, &bufsize, &max, &preamble))
         return NULL;
+    
+    #undef FMT
+    
     if(preamble && !preamble[0]) preamble = NULL;
     
     if(!file || file == Py_None) {

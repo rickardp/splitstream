@@ -42,7 +42,7 @@ class XmlTests(unittest.TestCase):
         assert v == [ self.DATA_XMLRPC ]
 
     def def_SplitWithPreamble(self):
-        v = self._do_split(self.DATA_XMLRPC[1:], preamble=self.DATA_XMLRPC[0])
+        v = self._do_split(self.DATA_XMLRPC[1:], preamble=self.DATA_XMLRPC[:1])
         assert v == [ self.DATA_XMLRPC ]
 
     def def_SplitWithLargePreamble(self):
@@ -67,7 +67,7 @@ class XmlTests(unittest.TestCase):
         assert v[-2] ==  self.DATA_XMLRPC 
         
     def def_SplitHugeOneXmlRpc(self):
-        vv = b''.join([ "<blob>" ] + [ self.DATA_XMLRPC ] * (1<<17) + [ "</blob>" ])
+        vv = b''.join([ b"<blob>" ] + [ self.DATA_XMLRPC ] * (1<<17) + [ b"</blob>" ])
         v = self._do_split(vv)
         assert len(v) == 1, "Length %d != %d" % (len(v), 1)
         assert v[0] == vv
