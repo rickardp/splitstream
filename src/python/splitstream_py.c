@@ -32,9 +32,10 @@ typedef struct {
 	PyObject* read, *callback;
 	SplitstreamScanner scanner;
 	SplitstreamState state;
-	int eof, fileeof;
+	int eof, fileeof, preambleDoc;
 	FILE* f;
 	long bufsize, max;
+	char* preamble;
 	char* buf;
 } Generator;
 
@@ -86,6 +87,7 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
     PyObject* file, *ret = Py_None;
     PyObject* file_read = NULL, *file_fileno = NULL, *noargs = NULL;
     const char* fmt = NULL;
+    const char* preamble = NULL;
     PyObject* callback = NULL;
     long bufsize = 0, max = 0, startDepth = 0;
     int fileno = -1;
@@ -110,13 +112,14 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
     	gt = 1;
     }
     
-    static char* kwarg_list[] = {"file", "format", "callback", "startdepth", "bufsize", "maxdocsize", NULL};
+    static char* kwarg_list[] = {"file", "format", "callback", "startdepth", "bufsize", "maxdocsize", "preamble", NULL};
  
  
 	noargs = PyTuple_Pack(0);
 	if(!noargs) return NULL;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|Oiii", kwarg_list, &file, &fmt, &callback, &startDepth, &bufsize, &max))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Os|Oiiis", kwarg_list, &file, &fmt, &callback, &startDepth, &bufsize, &max, &preamble))
         return NULL;
+    if(preamble && !preamble[0]) preamble = NULL;
     
     if(!file || file == Py_None) {
     	PyErr_SetString(PyExc_TypeError, "file argument not set"); 
@@ -185,6 +188,7 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
 	    g->callback = callback; Py_XINCREF(callback);
 	    g->bufsize = bufsize;
 	    g->max = max;
+	    if(preamble) g->preamble = strdup(preamble);
 	    SplitstreamInitDepth(&g->state, (int)startDepth);
 	    
 	    if(!callback) {
@@ -230,6 +234,7 @@ static void splitstream_generator_dealloc(Generator* state)
 	Py_XDECREF(state->callback); state->callback = NULL;
 	SplitstreamFree(&state->state);
 	if(state->buf) free(state->buf);
+	if(state->preamble) free(state->preamble);
 	state->buf = NULL;
 	Py_TYPE(state)->tp_free(state);
 }
@@ -258,6 +263,29 @@ static PyObject* splitstream_generator_next(Generator *state)
 	PyObject* readargs = state->f ? NULL : Py_BuildValue("(i)", state->bufsize);
 	PyObject* ret = NULL;
 	do {
+	
+		if(state->preamble) {
+			doc = SplitstreamGetNextDocument(&state->state, state->max, state->preamble, strlen(state->preamble), state->scanner);
+			free(state->preamble);
+			state->preamble = NULL;
+			if(doc.buffer) {
+				state->preambleDoc = 1;
+				ret = handle_doc(state, &doc);
+				break;
+			}
+		}
+
+		while(state->preambleDoc) {
+			state->preambleDoc = 0;
+			doc = SplitstreamGetNextDocument(&state->state, state->max, NULL, 0, state->scanner);
+			if(doc.buffer) {
+				state->preambleDoc = 1;
+				ret = handle_doc(state, &doc);
+				break;
+			}
+		}
+		if(doc.buffer) break;
+    
 		if(state->f) {
 			if(!state->buf) state->buf = malloc(state->bufsize);
 			if(!state->buf) {
@@ -280,7 +308,6 @@ static PyObject* splitstream_generator_next(Generator *state)
 				state->eof = 1;
 			}
 		} else {
-		
 			while(!state->fileeof) {
 				int eof = splitfile_pure_once(&state->state, state->read, readargs, state->max, state->scanner, &doc);
 				if(eof < 0) { ret = NULL; break; }

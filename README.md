@@ -161,7 +161,8 @@ It is also very easy to clone this repo and build from source, see the *Building
 
 There is only one function in the Python interface:
 
-    splitfile(file, format[, callback[, startdepth[, bufsize[, maxdocsize]]]])
+    splitfile(file, format[, callback[, startdepth
+    	[, bufsize[, maxdocsize[, preamble]]]]])
     
 The `file` argument is a file-like object (e.g. open file or `StringIO`, or anything with a `read([n])` method). 
 
@@ -186,6 +187,8 @@ The `callback` argument is used to specify a callback function to be called with
 `bufsize` specifies the buffer size. It may make sense to increase this size when it is expected that the documents are large. Usually you should leave this as default.
 
 `maxdocsize` specifies the maximum size for a document. Even if it is set, there is a maximum document size to prevent running out of memory in the case of oversized or malformed documents. If the internal buffer exceeds this size, tokenization restarts at whatever the current position was (this may cause the next document to be invalid as well).
+
+`preamble` is an optional string that should be parsed before reading the file. By combining `preamble` with seeking the file, the header can be rewritten without filtering all subsequent reads. Another useful application is when reading the first few bytes to detect the file format (magic bytes) or when chaining stream splitters.
 
 ### Example
 

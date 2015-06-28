@@ -30,16 +30,25 @@ class XmlTests(unittest.TestCase):
     
     DATA_XMLRPC = b"<params><param><value><struct><member><name>a</name><value><int>3</int></value></member><member><name>x</name><value><array><data><value><int>1</int></value><value><double>3.14</double></value><value><boolean>1</boolean></value><value><nil/></value></data></array></value></member><member><name>b</name><value><nil/></value></member><member><name>c</name><value><dateTime.iso8601>20121001T12:34:00</dateTime.iso8601></value></member></struct></value></param></params>"
     
-    def _do_split(self, string, startdepth=0):
+    def _do_split(self, string, **kw):
         f = self._loadstr(string)
         try:
-            return list(splitstream.splitfile(f, "xml", bufsize=self._bufsize, startdepth=startdepth))
+            return list(splitstream.splitfile(f, "xml", bufsize=self._bufsize, **kw))
         finally:
             f.close()
 
     def def_SplitSingleXmlRpc(self):
         v = self._do_split(self.DATA_XMLRPC)
         assert v == [ self.DATA_XMLRPC ]
+
+    def def_SplitWithPreamble(self):
+        v = self._do_split(self.DATA_XMLRPC[1:], preamble=self.DATA_XMLRPC[0])
+        assert v == [ self.DATA_XMLRPC ]
+
+    def def_SplitWithLargePreamble(self):
+        v = self._do_split(self.DATA_XMLRPC, preamble=self.DATA_XMLRPC + self.DATA_XMLRPC)
+        assert len(v) == 3, "%d != 3" % len(v)
+        assert v == [ self.DATA_XMLRPC, self.DATA_XMLRPC, self.DATA_XMLRPC ], "%r != %r" % (v, [ self.DATA_XMLRPC, self.DATA_XMLRPC, self.DATA_XMLRPC ])
         
     def def_SplitTwoSimpleXml(self):
         v = self._do_split(b"<root></root><root2/>")
@@ -51,11 +60,17 @@ class XmlTests(unittest.TestCase):
         
     def def_SplitHugeXmlRpc(self):
         v = self._do_split(b''.join([ self.DATA_XMLRPC ] * (1<<18)))
-        assert len(v) == 1<<18
+        assert len(v) == 1<<18, "Length %d != %d" % (len(v), 1<<18)
         assert v[0] ==  self.DATA_XMLRPC 
         assert v[1] ==  self.DATA_XMLRPC 
         assert v[-1] ==  self.DATA_XMLRPC 
         assert v[-2] ==  self.DATA_XMLRPC 
+        
+    def def_SplitHugeOneXmlRpc(self):
+        vv = b''.join([ "<blob>" ] + [ self.DATA_XMLRPC ] * (1<<17) + [ "</blob>" ])
+        v = self._do_split(vv)
+        assert len(v) == 1, "Length %d != %d" % (len(v), 1)
+        assert v[0] == vv
         
     def def_TwoXmlDocumentsWithLeadingComments(self):
         v = self._do_split(b"<!-- First document begins here--><root></root><!-- Second document begins here --><root2/>")
