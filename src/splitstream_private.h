@@ -32,6 +32,8 @@ typedef enum {
     State_Cdata,
 
     State_String,
+    State_LengthType,
+    State_Length,
 
     State_Rescan
 } SplitstreamTokenizerState;

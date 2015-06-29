@@ -6,7 +6,7 @@
 [![PyPi downloads](https://img.shields.io/pypi/dm/splitstream.svg)](https://pypi.python.org/pypi/splitstream/)
 ![Bindings](https://img.shields.io/badge/bindings-C%20%7C%20Python-lightgrey.svg)
 
-This is a C library with Python bindings that will help you split continuous streams of non-delimited XML documents or JSON objects/arrays. Instead of using regular expressions or other forms of string matching, the approach is to implement a basic tokenizer and element depth parser to detect where the document ends, without relying on the existence of specific elements, delimiters or length prefix.
+This is a C library with Python bindings that will help you split continuous streams of non-delimited XML documents or [JSON](http://json.org) and [UBJSON](http://ubjson.org) objects/arrays. Instead of using regular expressions or other forms of string matching, the approach is to implement a basic tokenizer and element depth parser to detect where the document ends, without relying on the existence of specific elements, delimiters or length prefix.
 
 The library is written in C and provides bindings for Python (supports Python 2.6+ and Python 3 as well as PyPy).
 
@@ -20,7 +20,7 @@ The library is written in C and provides bindings for Python (supports Python 2.
 
 # Features
 
-* Understands XML and JSON.
+* Understands XML, JSON and UBJSON.
 * Tokenizer will correctly handle complex documents (e.g. xml within comments or CDATA, escape sequences, processing instructions, etc).
 * Comprehensive and growing test suite.
 * Written in clean C with no dependencies except the standard C library.
@@ -35,7 +35,8 @@ The library is written in C and provides bindings for Python (supports Python 2.
 * **Will not actually parse the objects** (this is very much a design decision) - you need to feed the output from splitstream into your parser of choice.
 * Only JSON arrays and objects are supported as root objects.
 * Limited error handling. May not recover from malformed objects in many cases.
-* Limited documentation (the unit tests are a good start for now).
+* Limited documentation (this page and the unit tests are a good start for now).
+* UBJSON support is relatively untested.
 
 # The C interface
 
@@ -92,7 +93,7 @@ The `buf` parameter is a pointer to the input data (`SplitstreamGetNextDocument`
 
 The `file` parameter is a pointer to an open file or stream. The file needs to be readable, but not seekable.
 
-The `scanner` parameter is one of `SplitstreamXMLScanner` or `SplitstreamJSONScanner`, or your own tokenizer implementing the following prototype:
+The `scanner` parameter is one of `SplitstreamXMLScanner`, `SplitstreamJSONScanner` or `SplitstreamUBJSONScanner`, or your own tokenizer implementing the following prototype:
 
 ```C
 typedef size_t (*SplitstreamScanner)(
@@ -166,7 +167,7 @@ There is only one function in the Python interface:
     
 The `file` argument is a file-like object (e.g. open file or `StringIO`, or anything with a `read([n])` method). 
 
-`format` is either `"xml"` or `"json"` and specifies the document type to split on.
+`format` is either `"xml"`, `"json"` or `"ubjson"` and specifies the document type to split on.
 
 `startdepth` helps parsing subtrees of "infinite" XML documents, such as
 
@@ -190,7 +191,7 @@ The `callback` argument is used to specify a callback function to be called with
 
 `preamble` is an optional string that should be parsed before reading the file. By combining `preamble` with seeking the file, the header can be rewritten without filtering all subsequent reads. Another useful application is when reading the first few bytes to detect the file format (magic bytes) or when chaining stream splitters.
 
-### Example
+### Examples
 
 ```python
 from splitstream import splitfile

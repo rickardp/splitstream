@@ -16,7 +16,7 @@ setup(
     author_email="rickard@evolviq.com",
     version="1.1.0",
     description="Splitting of (XML, JSON) objects from a continuous stream",
-    ext_modules=[Extension('splitstream', ['src/python/splitstream_py.c', 'src/splitstream.c', 'src/splitstream_xml.c', 'src/splitstream_json.c', 'src/mempool.c'])],
+    ext_modules=[Extension('splitstream', ['src/python/splitstream_py.c', 'src/splitstream.c', 'src/splitstream_xml.c', 'src/splitstream_json.c', 'src/splitstream_ubjson.c', 'src/mempool.c'])],
     headers=['src/splitstream.h', 'src/splitstream_private.h'],
     install_requires=requirements + test_requirements,
     zip_safe=False,

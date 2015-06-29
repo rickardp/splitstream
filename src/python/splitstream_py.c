@@ -166,6 +166,8 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
     		scanner = SplitstreamXMLScanner;
 	    } else if(!strcmp(fmt, "json")) {
     		scanner = SplitstreamJSONScanner;
+	    } else if(!strcmp(fmt, "ubjson")) {
+    		scanner = SplitstreamUBJSONScanner;
 	    } else {
     		PyErr_SetString(PyExc_ValueError, "Invalid object format name specified"); 
 		    ret = NULL; break;

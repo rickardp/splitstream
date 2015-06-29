@@ -52,6 +52,7 @@ typedef size_t (*SplitstreamScanner)(SplitstreamState* ptr, const char* buf, siz
 /* Scanners. Send function pointer as last parameter of SplitstreamGetNextDocument. */
 size_t SPLITSTREAM_API SplitstreamXMLScanner(SplitstreamState* s, const char* buf, size_t len, size_t* start);
 size_t SPLITSTREAM_API SplitstreamJSONScanner(SplitstreamState* s, const char* buf, size_t len, size_t* start);
+size_t SPLITSTREAM_API SplitstreamUBJSONScanner(SplitstreamState* s, const char* buf, size_t len, size_t* start);
 
 void SPLITSTREAM_API SplitstreamDocumentFree(SplitstreamState* state, SplitstreamDocument* doc);
 void SPLITSTREAM_API SplitstreamInit(SplitstreamState* state);
