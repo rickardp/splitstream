@@ -86,7 +86,7 @@ size_t SplitstreamUBJSONScanner(SplitstreamState* s, const char* buf, size_t len
         	break;
         case 'L': /* int64 */
         case 'D': /* double */
-        	remainingCounter = 4;
+        	remainingCounter = 8;
         	TRANSITION(String);
         	break;
 		case ']':

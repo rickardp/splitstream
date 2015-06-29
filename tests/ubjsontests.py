@@ -63,7 +63,7 @@ class UbJsonTests(unittest.TestCase):
         assert v == exp, "%r != %r" % (v, exp )
 
     def def_SplitUbJsonInt32(self):
-        x = b"{C{Sl\x00\x01\x00\x00" + 0x010000 * b"}" + b"}"
+        x = b"{C{Sl\x00\x00\x01\x00" + 0x000100 * b"}" + b"}"
         v = self._do_split(b"".join([x, x]))
         exp = [ x, x ]
         assert v == exp, "%r != %r" % (v, exp )
