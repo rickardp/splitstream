@@ -1,10 +1,13 @@
-# splitstream - Continuous object splitter
+# splitstream - Stream document splitter
 
 [![Travis CI status](https://travis-ci.org/evolvIQ/splitstream.svg)](https://travis-ci.org/evolvIQ/splitstream)
 [![License](https://img.shields.io/github/license/evolvIQ/splitstream.svg)](https://github.com/evolvIQ/splitstream/blob/master/LICENSE)
 [![PyPi version](https://img.shields.io/pypi/v/splitstream.svg)](https://pypi.python.org/pypi/splitstream/)
 [![PyPi downloads](https://img.shields.io/pypi/dm/splitstream.svg)](https://pypi.python.org/pypi/splitstream/)
 ![Bindings](https://img.shields.io/badge/bindings-C%20%7C%20Python-lightgrey.svg)
+
+###`{"j":"s"}["o","n"]` → `{"j":"s"}`, `["o","n"]`
+###`<xml1/><xml2/>` → `<xml1/>`, `<xml2/>`
 
 This is a C library with Python bindings that will help you split continuous streams of non-delimited XML documents or [JSON](http://json.org) and [UBJSON](http://ubjson.org) objects/arrays. Instead of using regular expressions or other forms of string matching, the approach is to implement a basic tokenizer and element depth parser to detect where the document ends, without relying on the existence of specific elements, delimiters or length prefix.
 
@@ -20,12 +23,12 @@ The library is written in C and provides bindings for Python (supports Python 2.
 
 # Features
 
-* Understands XML, JSON and UBJSON.
+* Understands XML, [JSON](http://json.org) and [UBJSON](http://ubjson.org).
 * Tokenizer will correctly handle complex documents (e.g. xml within comments or CDATA, escape sequences, processing instructions, etc).
 * Comprehensive and growing test suite.
 * Written in clean C with no dependencies except the standard C library.
 * Possible to add your own tokenizers (in C) to add more object formats.
-* Python bindings.
+* Python bindings (Python 2.x and 3.x, tested with PyPy).
 * Set initial parse depth to allow for e.g. parsing a log file with an "infinite" (unclosed) root element.
 * Quite good performance and low memory footprint (constant with stream size), even from Python.
 * Convenience API for working with `FILE*` pointers (C) and file objects (Python).

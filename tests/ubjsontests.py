@@ -73,6 +73,13 @@ class UbJsonTests(unittest.TestCase):
         v = self._do_split(b"".join([x, x]))
         exp = [ x, x ]
         assert v == exp, "%r != %r" % (v, exp )
+
+    # TODO: Optimized collections are not yet implemented
+    #def def_SplitUbJsonOptimizedList(self):
+    #    x = b"[$i#i\x03]]}"
+    #    v = self._do_split(b"".join([x, x]))
+    #    exp = [ x, x ]
+    #    assert v == exp, "%r != %r" % (v, exp )
         
     def __init__(self, *a, **kw):
         unittest.TestCase.__init__(self, *a, **kw)

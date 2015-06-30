@@ -21,5 +21,17 @@ setup(
     install_requires=requirements + test_requirements,
     zip_safe=False,
     test_suite='tests',
-    classifiers=["License :: OSI Approved :: Apache Software License", "Topic :: Software Development :: Libraries :: Python Modules"]
+    classifiers=[
+        "License :: OSI Approved :: Apache Software License", 
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.6",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.2",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Programming Language :: Python :: Implementation :: PyPy",
+        "Intended Audience :: Developers"]
 )
