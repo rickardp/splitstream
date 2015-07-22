@@ -56,6 +56,12 @@ class JsonTests(unittest.TestCase):
         exp = [ b"{\"a\":3}", b"{\"b\":3}" ]
         assert v == exp, "%r != %r" % (v, exp)
         
+    def def_JsonDocumentsWithStartDepth(self):
+        v = self._do_split(b"  {  \"a\": [1,2,3], \"b\" : {\"x\" : 3 } }", startdepth=1)
+        exp = [ b"[1,2,3]",
+                b"{\"x\" : 3 }" ]
+        assert v == exp, "%r != %r" % (v, exp)
+
     def __init__(self, *a, **kw):
         unittest.TestCase.__init__(self, *a, **kw)
         self._loadstr = None

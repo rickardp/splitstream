@@ -48,7 +48,15 @@ static PyObject* splitstream_generator_next(Generator *state);
  */
  
 static PyMethodDef methods[] = {
-    {"splitfile", (PyCFunction)splitfile, METH_VARARGS | METH_KEYWORDS, "Split a file object.\n\nsplitfile(file, format[, callback]) -> Split the file, optionally specifying a callback that will be called with each object.\n\nIf callback is not specified, the function instead returns a list of the string chunks.\n\nOptional keyword arguments:\n  bufsize - Size of read buffer"},
+    {"splitfile", (PyCFunction)splitfile, METH_VARARGS | METH_KEYWORDS, "Split a file object.\n\n"
+    "splitfile(file, format[, callback][, startdepth][, bufsize][, maxdocsize][, preamble])"
+    " -> Split the file, optionally specifying a callback that will be called with each object.\n\n"
+    "If callback is not specified, the function instead returns a list of the string chunks.\n\n"
+    "Optional keyword arguments:\n"
+    "  startdepth  - Initial hierarchy depth (skip to this depth)\n"
+    "  bufsize     - Size of read buffer\n"
+    "  maxdocsize  - Maximum document size\n"
+    "  preamble    - Prepend file with this data (use when header already read)"},
     {NULL, NULL, 0, NULL}
 };
 

@@ -67,6 +67,9 @@ size_t SplitstreamJSONScanner(SplitstreamState* s, const char* buf, size_t len, 
 		LOOP_BEGIN
 		case '[':
 		case '{':
+		    if (s->depth == s->startDepth && s->startDepth > 0) {
+				*start = (cp - buf);
+			}
             ++s->depth;
             break;
 		case ']':
