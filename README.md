@@ -40,6 +40,7 @@ The library is written in C and provides bindings for Python (supports Python 2.
 * Limited error handling. May not recover from malformed objects in many cases.
 * Limited documentation (this page and the unit tests are a good start for now).
 * UBJSON support is relatively untested.
+* Python 2.x is not supported on the Microsoft Windows platform, as it is forced to use and old version of the C compiler that does not support the C99 syntax that this library uses.
 
 # The C interface
 
