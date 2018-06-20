@@ -113,20 +113,27 @@ void* mempool_Alloc(struct mempool* pool, size_t size)
 	int blocksNeeded, bitsRem, bit;
 	unsigned long mask;
 
-    if(size <= 1) size = (1 << MEMPOOL_QUANTUM_POWER);
+    if(size <= 1) size = ((size_t)1 << MEMPOOL_QUANTUM_POWER);
     blocksNeeded = (int)MEMPOOL_QUANTUMS(size);
 
 	if(blocksNeeded > MEMPOOL_BLOCK_QUANTUMS) {
+        // Number of blocks required to store `size` exceeds the amount
+        // that will fit within a block.
 		return malloc(MEMPOOL_BLOCK_QUANTIFY(size));
-	}
-
-	mask = (1 << blocksNeeded) - 1;
+	} else if (blocksNeeded == MEMPOOL_BLOCK_QUANTUMS) {
+        // Storing `size` requires an entire block.
+        // Doing a left-shift of `blocksNeeded` will overflow, so we
+        // manually set the `mask` to cover the entire block (0xFFFF...FFFF).
+        mask = ~(unsigned long)0;
+    } else {
+        mask = ((unsigned long)1 << blocksNeeded) - 1;
+    }
 
 	bitsRem = MEMPOOL_BLOCK_QUANTUMS - blocksNeeded;
 	for(bit = 0; bit <= bitsRem; ++bit) {
 		if(((pool->bitmask >> bit) & mask) == 0) {
 			pool->bitmask |= mask << bit;
-			void* pd = pool->data + (1 << MEMPOOL_QUANTUM_POWER) * bit;
+			void* pd = pool->data + ((unsigned long)1 << MEMPOOL_QUANTUM_POWER) * bit;
 			return pd;
 		}
 	}
@@ -147,7 +154,7 @@ void mempool_Free(struct mempool* pool, void* ptr, size_t size)
 	if(p >= pool->data && p < end) {
 		int blocksNeeded, offset;
     	size_t mask;
-    	if(size <= 1) size = (1 << MEMPOOL_QUANTUM_POWER);
+    	if(size <= 1) size = ((size_t)1 << MEMPOOL_QUANTUM_POWER);
 	    blocksNeeded = (int)((size - 1) >> (MEMPOOL_QUANTUM_POWER)) + 1;
 		offset = (int)((p - pool->data) >> MEMPOOL_QUANTUM_POWER);
 		mask = MEMPOOL_BITMASK(blocksNeeded, offset);
@@ -169,8 +176,8 @@ static unsigned char* mempool_ReAlloc_internal(struct mempool* pool, struct memp
 		void* newptr;
 		int oldNeeded, newNeeded, offset;
 		
-	    if(oldSize <= 1) oldSize = (1 << MEMPOOL_QUANTUM_POWER);
-    	if(newSize <= 1) newSize = (1 << MEMPOOL_QUANTUM_POWER);
+	    if(oldSize <= 1) oldSize = ((size_t)1 << MEMPOOL_QUANTUM_POWER);
+    	if(newSize <= 1) newSize = ((size_t)1 << MEMPOOL_QUANTUM_POWER);
 	    oldNeeded = (int)MEMPOOL_QUANTUMS(oldSize);
     	newNeeded = (int)MEMPOOL_QUANTUMS(newSize);
 	    if(newNeeded <= oldNeeded) return ptr; /* Never shrink */
