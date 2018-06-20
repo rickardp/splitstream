@@ -3,7 +3,6 @@
 [![Travis CI status](https://travis-ci.org/rickardp/splitstream.svg)](https://travis-ci.org/rickardp/splitstream)
 [![License](https://img.shields.io/github/license/evolvIQ/splitstream.svg)](https://github.com/evolvIQ/splitstream/blob/master/LICENSE)
 [![PyPi version](https://img.shields.io/pypi/v/splitstream.svg)](https://pypi.python.org/pypi/splitstream/)
-[![PyPi downloads](https://img.shields.io/pypi/dm/splitstream.svg)](https://pypi.python.org/pypi/splitstream/)
 ![Bindings](https://img.shields.io/badge/bindings-C%20%7C%20Python-lightgrey.svg)
 
 ###`{"j":"s"}["o","n"]` → `{"j":"s"}`, `["o","n"]`
