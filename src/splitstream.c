@@ -64,8 +64,10 @@ SplitstreamDocument SPLITSTREAM_API SplitstreamGetNextDocument(SplitstreamState*
     if(s->state != State_Init && start < len) {
         if(didSetStart) {
             SplitstreamDocumentFree(s, &s->doc);
-        } else if(s->doc.length + len - start > max) {
-            // If document was too large, discard it
+        } else if(end == 0 &&  // No document was found.
+                  s->doc.length + len - start > max) {
+            // If we scanned more than `max` without finishing a document,
+            // discard what we have read so far and start over.
             SplitstreamDocumentFree(s, &s->doc);
             s->state = State_Init;
         }
