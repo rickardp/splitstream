@@ -1,6 +1,6 @@
 # splitstream - Stream document splitter
 
-[![Travis CI status](https://travis-ci.org/evolvIQ/splitstream.svg)](https://travis-ci.org/evolvIQ/splitstream)
+[![Travis CI status](https://travis-ci.org/rickardp/splitstream.svg)](https://travis-ci.org/rickardp/splitstream)
 [![License](https://img.shields.io/github/license/evolvIQ/splitstream.svg)](https://github.com/evolvIQ/splitstream/blob/master/LICENSE)
 [![PyPi version](https://img.shields.io/pypi/v/splitstream.svg)](https://pypi.python.org/pypi/splitstream/)
 [![PyPi downloads](https://img.shields.io/pypi/dm/splitstream.svg)](https://pypi.python.org/pypi/splitstream/)
