@@ -117,10 +117,17 @@ void* mempool_Alloc(struct mempool* pool, size_t size)
     blocksNeeded = (int)MEMPOOL_QUANTUMS(size);
 
 	if(blocksNeeded > MEMPOOL_BLOCK_QUANTUMS) {
+        // Number of blocks required to store `size` exceeds the amount
+        // that will fit within a block.
 		return malloc(MEMPOOL_BLOCK_QUANTIFY(size));
-	}
-
-	mask = ((unsigned long)1 << blocksNeeded) - 1;
+	} else if (blocksNeeded == MEMPOOL_BLOCK_QUANTUMS) {
+        // Storing `size` requires an entire block.
+        // Doing a left-shift of `blocksNeeded` will overflow, so we
+        // manually set the `mask` to cover the entire block (0xFFFF...FFFF).
+        mask = ~(unsigned long)0;
+    } else {
+        mask = ((unsigned long)1 << blocksNeeded) - 1;
+    }
 
 	bitsRem = MEMPOOL_BLOCK_QUANTUMS - blocksNeeded;
 	for(bit = 0; bit <= bitsRem; ++bit) {
