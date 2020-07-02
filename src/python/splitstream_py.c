@@ -103,7 +103,7 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
     Generator* g;
     static int gt = 0;
     static PyTypeObject gentype = {
-    	PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    	PyVarObject_HEAD_INIT(NULL, 0)
     	"splitstream.( generator )",
     	sizeof(Generator)
     };
