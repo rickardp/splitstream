@@ -93,7 +93,7 @@ initsplitstream(void)
 static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     PyObject* file, *ret = Py_None;
-    PyObject* file_read = NULL, *file_fileno = NULL, *noargs = NULL;
+    PyObject* file_read = NULL, *file_fileno = NULL, *file_fileobj = NULL, *noargs = NULL;
     const char* fmt = NULL;
     const char* preamble = NULL;
     PyObject* callback = NULL;
@@ -149,26 +149,30 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
     	file_read = PyObject_GetAttrString(file, "read");
 	    if(!file_read) { ret = NULL; break; }
     
-    	file_fileno = PyObject_GetAttrString(file, "fileno");
-    	if(file_fileno) {
-	    	PyObject* fn = PyObject_Call(file_fileno, noargs, NULL);
-	    	#if PY_MAJOR_VERSION >= 3
-	    	if(fn) {
-	    	#else
-	    	if(!fn) { ret = NULL; break; }
-	    	#endif
-	    	
-    		fileno = (int)PyLong_AsLong(fn);
-    		if(fileno < 0) {
-    			if(!PyErr_Occurred()) {
-    				PyErr_Format(PyExc_ValueError, "Invalid fileno %d.", fileno); 
-    			}
-    			ret = NULL; break;
-    		}
-    		#if PY_MAJOR_VERSION >= 3
-    		} else PyErr_Clear();
-    		#endif
-    	} else PyErr_Clear();
+    	file_fileobj = PyObject_GetAttrString(file, "fileobj");
+		if(!file_fileobj) {
+			PyErr_Clear();
+			file_fileno = PyObject_GetAttrString(file, "fileno");
+			if(file_fileno) {
+				PyObject* fn = PyObject_Call(file_fileno, noargs, NULL);
+				#if PY_MAJOR_VERSION >= 3
+				if(fn) {
+				#else
+				if(!fn) { ret = NULL; break; }
+				#endif
+				
+				fileno = (int)PyLong_AsLong(fn);
+				if(fileno < 0) {
+					if(!PyErr_Occurred()) {
+						PyErr_Format(PyExc_ValueError, "Invalid fileno %d.", fileno); 
+					}
+					ret = NULL; break;
+				}
+				#if PY_MAJOR_VERSION >= 3
+				} else PyErr_Clear();
+				#endif
+			} else PyErr_Clear();
+		}
     
 	    if(!strcmp(fmt, "xml")) {
     		scanner = SplitstreamXMLScanner;
@@ -221,6 +225,7 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
 	} while(0);
 	
     Py_XDECREF(file_fileno);
+    Py_XDECREF(file_fileobj);
     Py_XDECREF(file_read);
     Py_XDECREF(file);
     Py_XDECREF(callback);

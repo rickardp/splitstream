@@ -1,5 +1,6 @@
 import unittest
 import os
+import gzip
 try:
     from StringIO import StringIO
 except ImportError:
@@ -27,6 +28,18 @@ class JsonTests(unittest.TestCase):
         f.write(b)
         f.seek(0)
         return f
+    
+    def _gzipfile(self, string):
+        f = tempfile.TemporaryFile()
+        gz = gzip.GzipFile(compresslevel=9, fileobj=f, mode='w')
+        if bytes != type(string):
+            b = bytes(string, 'utf-8')
+        else:
+            b = string
+        gz.write(b)
+        gz.close()
+        f.seek(0)
+        return gzip.GzipFile(fileobj=f, mode='rb')
     
     def _do_split(self, string, startdepth=0):
         f = self._loadstr(string)
@@ -70,13 +83,15 @@ class JsonTests(unittest.TestCase):
 for m in dir(JsonTests):
     if m.startswith("def_"):
         func = getattr(JsonTests, m)
-        for mode in ["str", "file"]:
+        for mode in ["str", "file", "gzip"]:
             for bufsize in [1, 2, 7, 4096]:
                 if "SplitHuge" in m and bufsize != 4096: continue
                 def addt(m, mode, bufsize, func):
                     def ff(self):
                         if mode == "str":
                             self._loadstr = self._stringio
+                        elif mode == "gzip":
+                            self._loadstr = self._gzipfile
                         else:
                             self._loadstr = self._tempfile
                         self._bufsize = bufsize
