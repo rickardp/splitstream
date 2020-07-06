@@ -149,27 +149,30 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
     	file_read = PyObject_GetAttrString(file, "read");
 	    if(!file_read) { ret = NULL; break; }
     
-    	file_fileno = PyObject_GetAttrString(file, "fileno");
     	file_fileobj = PyObject_GetAttrString(file, "fileobj");
-    	if(file_fileno && !file_fileobj) {
-	    	PyObject* fn = PyObject_Call(file_fileno, noargs, NULL);
-	    	#if PY_MAJOR_VERSION >= 3
-	    	if(fn) {
-	    	#else
-	    	if(!fn) { ret = NULL; break; }
-	    	#endif
-	    	
-    		fileno = (int)PyLong_AsLong(fn);
-    		if(fileno < 0) {
-    			if(!PyErr_Occurred()) {
-    				PyErr_Format(PyExc_ValueError, "Invalid fileno %d.", fileno); 
-    			}
-    			ret = NULL; break;
-    		}
-    		#if PY_MAJOR_VERSION >= 3
-    		} else PyErr_Clear();
-    		#endif
-    	} else PyErr_Clear();
+		if(!file_fileobj) {
+			PyErr_Clear();
+			file_fileno = PyObject_GetAttrString(file, "fileno");
+			if(file_fileno) {
+				PyObject* fn = PyObject_Call(file_fileno, noargs, NULL);
+				#if PY_MAJOR_VERSION >= 3
+				if(fn) {
+				#else
+				if(!fn) { ret = NULL; break; }
+				#endif
+				
+				fileno = (int)PyLong_AsLong(fn);
+				if(fileno < 0) {
+					if(!PyErr_Occurred()) {
+						PyErr_Format(PyExc_ValueError, "Invalid fileno %d.", fileno); 
+					}
+					ret = NULL; break;
+				}
+				#if PY_MAJOR_VERSION >= 3
+				} else PyErr_Clear();
+				#endif
+			} else PyErr_Clear();
+		}
     
 	    if(!strcmp(fmt, "xml")) {
     		scanner = SplitstreamXMLScanner;
