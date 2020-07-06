@@ -20,7 +20,7 @@ setup(
     headers=['src/splitstream.h', 'src/splitstream_private.h'],
     install_requires=requirements + test_requirements,
     zip_safe=False,
-    test_suite='tests',
+    test_suite='test',
     classifiers=[
         "License :: OSI Approved :: Apache Software License", 
         "Topic :: Software Development :: Libraries :: Python Modules",
