@@ -93,7 +93,7 @@ initsplitstream(void)
 static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     PyObject* file, *ret = Py_None;
-    PyObject* file_read = NULL, *file_fileno = NULL, *noargs = NULL;
+    PyObject* file_read = NULL, *file_fileno = NULL, *file_fileobj = NULL, *noargs = NULL;
     const char* fmt = NULL;
     const char* preamble = NULL;
     PyObject* callback = NULL;
@@ -150,7 +150,8 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
 	    if(!file_read) { ret = NULL; break; }
     
     	file_fileno = PyObject_GetAttrString(file, "fileno");
-    	if(file_fileno) {
+    	file_fileobj = PyObject_GetAttrString(file, "fileobj");
+    	if(file_fileno && !file_fileobj) {
 	    	PyObject* fn = PyObject_Call(file_fileno, noargs, NULL);
 	    	#if PY_MAJOR_VERSION >= 3
 	    	if(fn) {
@@ -221,6 +222,7 @@ static PyObject* splitfile(PyObject* self, PyObject* args, PyObject* kwargs)
 	} while(0);
 	
     Py_XDECREF(file_fileno);
+    Py_XDECREF(file_fileobj);
     Py_XDECREF(file_read);
     Py_XDECREF(file);
     Py_XDECREF(callback);
