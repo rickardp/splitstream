@@ -14,7 +14,7 @@ setup(
     url="https://github.com/rickardp/splitstream",
     author="Rickard Lyrenius",
     author_email="rickard@evolviq.com",
-    version="1.2.3",
+    version="1.2.4",
     description="Splitting of (XML, JSON) objects from a continuous stream",
     ext_modules=[Extension('splitstream', 
         [
