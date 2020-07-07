@@ -38,10 +38,6 @@ jobs:
     if: startsWith(github.ref, 'refs/tags')
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python for dist
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
     - name: Build dist
       run: |
         python setup.py sdist

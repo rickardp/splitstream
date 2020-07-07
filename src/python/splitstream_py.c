@@ -18,7 +18,8 @@
 
 #include <Python.h>
 #include <bytesobject.h>
-#include "../splitstream.h"
+#include <splitstream.h>
+
 const static int SPLITSTREAM_STATE_FLAG_DID_RETURN_DOCUMENT = 8;
 const static int SPLITSTREAM_STATE_FLAG_FILE_EOF = 16;
  

@@ -16,7 +16,7 @@
  *   limitations under the License.
  */
 
-#include "splitstream_private.h"
+#include <splitstream_private.h>
 
 const int COUNTER_DASH = 0;
 const int COUNTER_CLOSING_BRACKET = 1;

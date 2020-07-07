@@ -16,7 +16,7 @@
  *   limitations under the License.
  */
 
-#include "splitstream_private.h"
+#include <splitstream_private.h>
 #include <string.h>
 
 static void AppendDoc(SplitstreamState* state, SplitstreamDocument* dest, const void* ptr, size_t length);

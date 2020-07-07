@@ -16,7 +16,7 @@
  *   limitations under the License.
  */
 
-#include "splitstream_private.h"
+#include <splitstream_private.h>
 
 size_t SplitstreamJSONScanner(SplitstreamState* s, const char* buf, size_t len, size_t* start) {
 	int escapeCounter = s->counter[0];

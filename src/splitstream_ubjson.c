@@ -16,7 +16,7 @@
  *   limitations under the License.
  */
 
-#include "splitstream_private.h"
+#include <splitstream_private.h>
 
 size_t SplitstreamUBJSONScanner(SplitstreamState* s, const char* buf, size_t len, size_t* start) {
 	int remainingCounter = s->counter[0], value = s->counter[1];
