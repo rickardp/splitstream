@@ -16,12 +16,15 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "pypy2.7", "pypy3.9"]
+        python-version: ["2.7", "3.6", "3.7", "3.8", "3.9", "3.10", "pypy3.9"]
+        arch: [x86_64, aarch64]
         exclude:
-          - os: macos-latest
-            python-version: "3.5"
           - os: windows-latest
-            python-version: "3.5"
+            arch: aarch64
+          - os: macos-latest # Not yet supported by GitHub actions
+            arch: aarch64
+          - arch: aarch64 # Python 2.7 does not have a supported manylinux image for ARM64
+            python-version: "2.7"
           - os: macos-latest
             python-version: "3.6"
           - os: windows-latest
@@ -37,11 +40,27 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - run: pip install --upgrade pip && pip install wheel auditwheel
+    - run: pip install --upgrade pip && pip install wheel
+    - name: Set up Docker multiarch
+      if: startsWith(matrix.os, 'ubuntu')
+      uses: docker/setup-qemu-action@v2
+    - name: Build
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        if [ "${{ matrix.python-version }}" == "2.7" ]; then
+          manylinux_image=manylinux1
+        else
+          manylinux_image=manylinux2014
+        fi
+        image=quay.io/pypa/${manylinux_image}_${{ matrix.arch }}
+        echo "Using image $image"
+        docker run --user $(id -u) -i -w /src -v $PWD:/src $image ./make_manylinux.sh ${{ matrix.python-version }}
+        ls -lR ./dist/
     - name: Test
       run: |
         python setup.py test
     - name: Build
+      if: "!startsWith(matrix.os, 'ubuntu')"
       run: |
         python setup.py bdist_wheel
     - name: Upload build artifact
