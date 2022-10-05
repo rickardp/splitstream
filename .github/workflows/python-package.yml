@@ -5,7 +5,7 @@ name: Python package
 
 on:
   push:
-    branches: [ master ]
+    branches: [ "*" ]
   pull_request:
     branches: [ master ]
   release:
@@ -36,6 +36,9 @@ jobs:
     - name: Test
       run: |
         python setup.py test
+    - name: Build
+      run: |
+        python setup.py bdist_wheel
   publish:
     needs: build
     runs-on: ubuntu-latest
