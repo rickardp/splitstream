@@ -13,39 +13,60 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8, pypy2, pypy3]
+        python-version: ["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "pypy2.7", "pypy3.9"]
         exclude:
           - os: macos-latest
-            python-version: 3.5
+            python-version: "3.5"
           - os: windows-latest
-            python-version: 3.5
+            python-version: "3.5"
           - os: macos-latest
-            python-version: 3.6
+            python-version: "3.6"
           - os: windows-latest
-            python-version: 3.6
+            python-version: "3.6"
+          - os: windows-latest
+            python-version: "2.7" # Any supported C++ compiler can no longer target Python 2.7
+          - os: windows-latest
+            python-version: "pypy2.7" # Any supported C++ compiler can no longer target Python 2.7
+    runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+    - run: pip install --upgrade pip && pip install wheel
     - name: Test
       run: |
         python setup.py test
+    - name: Build
+      run: |
+        python setup.py bdist_wheel
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: bdist_wheel
+        path: dist/splitstream-*.whl
+        retention-days: 7
   publish:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags')
     steps:
     - uses: actions/checkout@v2
     - name: Build dist
       run: |
         python setup.py sdist
+    - name: Download build artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: bdist_wheel
+        path: dist/
+    - run: |
+        ls -lR dist/
     - name: Publish to PyPi
+      if: startsWith(github.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@master
       with:
         password: ${{ secrets.pypi }}
