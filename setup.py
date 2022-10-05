@@ -16,6 +16,8 @@ setup(
     author_email="rickard@evolviq.com",
     version="1.2.5",
     description="Splitting of (XML, JSON) objects from a continuous stream",
+    long_description="Splitting of (XML, JSON) objects from a continuous stream",
+    long_description_content_type="text/plain",
     ext_modules=[Extension('splitstream', 
         [
             'src/python/splitstream_py.c',
