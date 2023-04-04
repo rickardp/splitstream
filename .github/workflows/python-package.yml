@@ -21,8 +21,6 @@ jobs:
         exclude:
           - os: windows-latest
             arch: aarch64
-          - os: macos-latest # Not yet supported by GitHub actions
-            arch: aarch64
           - arch: aarch64 # Python 2.7 does not have a supported manylinux image for ARM64
             python-version: "2.7"
           - os: macos-latest
